@@ -5,14 +5,16 @@
 # Ein Eintrag pro angezeigtem Wert: Modul und Feld in der psychTestR-
 # Ergebnisdatei. Ein neuer Test oder Fragebogen ist eine neue Zeile.
 test_registry <- data.frame(
-  id     = c("GMS_General", "TOM_Incremental", "TOM_Entity", "MIQ_ability", "JAJ_ability"),
-  module = c("GMS", "TOM", "TOM", "MIQ", "JAJ"),
-  field  = c("General", "Incremental", "Entity", "ability", "ability"),
+  id     = c("GMS_General", "TOM_Incremental", "TOM_Entity", "MIQ_ability", "JAJ_ability",
+             "BDS_score"),
+  module = c("GMS", "TOM", "TOM", "MIQ", "JAJ", "BDS"),
+  field  = c("General", "Incremental", "Entity", "ability", "ability", "score"),
   label  = c("Gold-MSI: Allgemeine Musikalität (Skalenmittelwert)",
              "Theory of Musicality: Incremental (Skalenmittelwert)",
              "Theory of Musicality: Entity (Skalenmittelwert)",
              "Intelligenz (MIQ): Fähigkeitswert",
-             "Arbeitsgedächtnis (JAJ): Fähigkeitswert"),
+             "Arbeitsgedächtnis (JAJ): Fähigkeitswert",
+             "Ziffernfolgen rückwärts (BDS): Anteil richtig"),
   stringsAsFactors = FALSE
 )
 
@@ -64,7 +66,8 @@ simulate_test_data <- function(ids, start = as.Date("2026-10-21"), seed = 2) {
     TOM_Incremental = function() round(min(5, max(1, rnorm(1, 3.8, 0.6))), 2),
     TOM_Entity      = function() round(min(5, max(1, rnorm(1, 2.4, 0.7))), 2),
     MIQ_ability     = function() round(rnorm(1, 0.2, 1), 2),
-    JAJ_ability     = function() round(rnorm(1, 0, 1), 2)
+    JAJ_ability     = function() round(rnorm(1, 0, 1), 2),
+    BDS_score       = function() round(min(1, max(0, rnorm(1, 0.6, 0.15))), 2)
   )
   rows <- list()
   add <- function(id, test, day) {
