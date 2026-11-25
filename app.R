@@ -11,7 +11,9 @@
 # Umgebungsvariablen:
 #   MONITOR_DATA_ROOT       Ordner mit <gruppe>_protocol/output/results
 #                           (Standard: /srv/shiny-server)
-#   MONITOR_TEST_DIRS       Ergebnisverzeichnisse der Tests, getrennt durch ";"
+#   MONITOR_TEST_DIRS       Ergebnisverzeichnisse der Tests, getrennt durch ";",
+#                           Platzhalter * erlaubt (Standard: alle Batterien unter
+#                           /srv/shiny-server/musikalische_entwicklung_messen)
 #   MONITOR_ADMIN_PASSWORD  Passwort der Dozentenansicht (ohne: gesperrt)
 # Gibt es weder Protokolle noch Testergebnisse, laufen Demodaten.
 # Hilfsfunktionen in R/ werden von Shiny automatisch geladen.
@@ -21,7 +23,12 @@ library(shiny)
 library(bslib)
 
 data_root      <- Sys.getenv("MONITOR_DATA_ROOT", unset = "/srv/shiny-server")
-test_dirs      <- strsplit(Sys.getenv("MONITOR_TEST_DIRS"), ";", fixed = TRUE)[[1]]
+# Platzhalter werden bei jedem Einlesen neu aufgelöst: Eine neue Batterie in
+# musikalische_entwicklung_messen/ erscheint ohne Neustart des Monitors.
+test_dirs      <- strsplit(Sys.getenv(
+  "MONITOR_TEST_DIRS",
+  unset = "/srv/shiny-server/musikalische_entwicklung_messen/*/output/results"
+), ";", fixed = TRUE)[[1]]
 admin_password <- Sys.getenv("MONITOR_ADMIN_PASSWORD")
 
 # Schutz der Anonymität: Gruppenmittel erst ab so vielen Personen pro Woche,
@@ -245,7 +252,7 @@ server <- function(input, output, session) {
     need_person()
     data <- compare(input$uni_var)
     values <- data[[input$uni_var]]
-    plot_histogram(values[!data$own], values[data$own],
+    plot_histogram(values, values[data$own],
                    variable_label(input$uni_var, person()$group))
   }, res = 96)
 

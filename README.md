@@ -17,7 +17,7 @@ shiny::runApp()
 | Umgebungsvariable | Bedeutung |
 |---|---|
 | `MONITOR_DATA_ROOT` | Ordner, in dem `<gruppe>_protocol/output/results` liegt. Standard: `/srv/shiny-server` |
-| `MONITOR_TEST_DIRS` | Ergebnisverzeichnisse der Tests und Fragebögen, getrennt durch `;` |
+| `MONITOR_TEST_DIRS` | Ergebnisverzeichnisse der Tests und Fragebögen, getrennt durch `;`, Platzhalter `*` erlaubt. Standard: `/srv/shiny-server/musikalische_entwicklung_messen/*/output/results` (jede Batterie in diesem Ordner wird ohne Neustart gefunden) |
 | `MONITOR_ADMIN_PASSWORD` | Passwort der Dozentenansicht. Ohne Variable ist sie gesperrt |
 
 - Die Daten werden beim Seitenaufruf und bei jedem Klick auf „Anzeigen" neu
@@ -39,8 +39,8 @@ shiny::runApp()
 | Übersicht | Zahl der Protokolle, erstes und letztes Datum, alle Testergebnisse mit Datum |
 | Lernverlauf | Kurven je nach Gruppe, dazu der Gruppenmittelwert pro Kalenderwoche |
 | Übezeit | Minuten pro Woche, dazu der Gruppenmittelwert |
-| Univariat | Eigener Wert im Histogramm der übrigen Personen |
-| Bivariat | Streudiagramm zweier Variablen mit eigenem Punkt |
+| Univariat | Histogramm des ganzen Seminars, eigener Wert als rote vertikale Linie |
+| Bivariat | Streudiagramm des ganzen Seminars, eigener Punkt rot mit roten Linien bei den eigenen Werten |
 | Dozent*in | Rücklauf pro Woche, alle Personen, Ansicht einer Person öffnen |
 
 ## Verrechnung
@@ -67,7 +67,10 @@ shiny::runApp()
 
 Eine Zeile in `test_registry` (`R/test_data.R`): Modul und Feld in der
 psychTestR-Ergebnisdatei sowie die Beschriftung. Der Wert erscheint dann in
-der Übersicht und in Univariat/Bivariat.
+der Übersicht und in Univariat/Bivariat. Eingetragen sind GMS, TOM, MIQ, JAJ,
+BDS, RAT und BAT. Liegt die Batterie unter
+`/srv/shiny-server/musikalische_entwicklung_messen/<name>/`, findet der
+Monitor ihre Ergebnisse von selbst.
 
 ## Aufbau
 

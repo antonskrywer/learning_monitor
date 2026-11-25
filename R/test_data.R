@@ -6,15 +6,18 @@
 # Ergebnisdatei. Ein neuer Test oder Fragebogen ist eine neue Zeile.
 test_registry <- data.frame(
   id     = c("GMS_General", "TOM_Incremental", "TOM_Entity", "MIQ_ability", "JAJ_ability",
-             "BDS_score"),
-  module = c("GMS", "TOM", "TOM", "MIQ", "JAJ", "BDS"),
-  field  = c("General", "Incremental", "Entity", "ability", "ability", "score"),
+             "BDS_score", "RAT_ability", "BAT_ability"),
+  module = c("GMS", "TOM", "TOM", "MIQ", "JAJ", "BDS", "RAT", "BAT"),
+  field  = c("General", "Incremental", "Entity", "ability", "ability", "score",
+             "ability", "ability"),
   label  = c("Gold-MSI: Allgemeine Musikalität (Skalenmittelwert)",
              "Theory of Musicality: Incremental (Skalenmittelwert)",
              "Theory of Musicality: Entity (Skalenmittelwert)",
              "Intelligenz (MIQ): Fähigkeitswert",
              "Arbeitsgedächtnis (JAJ): Fähigkeitswert",
-             "Ziffernfolgen rückwärts (BDS): Anteil richtig"),
+             "Ziffernfolgen rückwärts (BDS): Anteil richtig",
+             "Rhythmuswahrnehmung (RAT): Fähigkeitswert",
+             "Beat-Wahrnehmung (BAT): Fähigkeitswert"),
   stringsAsFactors = FALSE
 )
 
@@ -41,8 +44,10 @@ read_test_file <- function(file) {
 
 # Alle Messungen aus den Ergebnisverzeichnissen. psychTestR speichert eine
 # Sitzung mehrfach (Zwischenstände), deshalb zählt jeder Wert pro Sitzung
-# (Person, Test, Startzeit) nur einmal.
+# (Person, Test, Startzeit) nur einmal. dirs darf Platzhalter (*) enthalten;
+# Dateien ohne Wert aus der Registry (z.B. Protokolle) werden übergangen.
 read_tests <- function(dirs) {
+  dirs <- unique(unlist(lapply(dirs[nzchar(dirs)], Sys.glob)))
   files <- unlist(lapply(dirs, list.files, pattern = "\\.rds$", full.names = TRUE))
   rows <- Filter(Negate(is.null), lapply(files, read_test_file))
   if (length(rows) == 0) return(empty_tests())
@@ -67,7 +72,9 @@ simulate_test_data <- function(ids, start = as.Date("2026-10-21"), seed = 2) {
     TOM_Entity      = function() round(min(5, max(1, rnorm(1, 2.4, 0.7))), 2),
     MIQ_ability     = function() round(rnorm(1, 0.2, 1), 2),
     JAJ_ability     = function() round(rnorm(1, 0, 1), 2),
-    BDS_score       = function() round(min(1, max(0, rnorm(1, 0.6, 0.15))), 2)
+    BDS_score       = function() round(min(1, max(0, rnorm(1, 0.6, 0.15))), 2),
+    RAT_ability     = function() round(rnorm(1, 0, 1), 2),
+    BAT_ability     = function() round(rnorm(1, 0, 1), 2)
   )
   rows <- list()
   add <- function(id, test, day) {

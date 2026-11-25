@@ -166,27 +166,33 @@ plot_practice <- function(own, group) {
 }
 
 # --- Univariat ----------------------------------------------
-# Verteilung der übrigen Personen, eigener Wert als rote Linie.
-plot_histogram <- function(others, own_value, label) {
-  ggplot2::ggplot(data.frame(value = others), ggplot2::aes(value)) +
+# Verteilung des ganzen Seminars (eigener Wert eingeschlossen), eigener Wert
+# als rote vertikale Linie.
+plot_histogram <- function(values, own_value, label) {
+  ggplot2::ggplot(data.frame(value = values), ggplot2::aes(value)) +
     ggplot2::geom_histogram(bins = 12, fill = uhh_hellblau, colour = "white") +
     ggplot2::geom_vline(xintercept = own_value, colour = uhh_rot, linewidth = 1.6) +
     ggplot2::scale_y_continuous(breaks = function(l) unique(floor(pretty(l))), name = "Personen") +
     ggplot2::labs(x = label,
-                  caption = sprintf("Rote Linie: eigener Wert (%s). Balken: übrige Personen (n = %d).",
-                                    format_value(own_value), length(others))) +
+                  caption = sprintf("Rote Linie: eigener Wert (%s).\nBalken: ganzes Seminar (n = %d).",
+                                    format_value(own_value), length(values))) +
     theme_monitor()
 }
 
 # --- Bivariat -----------------------------------------------
-# data: x, y, own. Übrige Personen hellblau, eigener Punkt rot.
+# data: x, y, own. Ganzes Seminar als hellblaue Punkte, eigener Punkt rot,
+# dazu rote Linien bei den eigenen Werten (vertikal: x, horizontal: y).
 plot_scatter <- function(data, x_label, y_label) {
   r <- suppressWarnings(stats::cor(data$x, data$y))
-  ggplot2::ggplot(data[!data$own, ], ggplot2::aes(x, y)) +
-    ggplot2::geom_point(colour = uhh_hellblau, size = 3.4) +
-    ggplot2::geom_point(data = data[data$own, ], colour = uhh_rot, size = 5.5) +
+  own <- data[data$own, ]
+  ggplot2::ggplot(data, ggplot2::aes(x, y)) +
+    ggplot2::geom_vline(xintercept = own$x, colour = uhh_rot, linewidth = 1.2) +
+    ggplot2::geom_hline(yintercept = own$y, colour = uhh_rot, linewidth = 1.2, linetype = "dashed") +
+    ggplot2::geom_point(data = data[!data$own, ], colour = uhh_hellblau, size = 3.4) +
+    ggplot2::geom_point(data = own, colour = uhh_rot, size = 5.5) +
     ggplot2::labs(x = x_label, y = y_label,
-                  caption = sprintf("Roter Punkt: eigener Wert. Korrelation r = %s (n = %d).",
+                  caption = sprintf(paste0("Roter Punkt und rote Linien: eigene Werte.\n",
+                                           "Punkte: ganzes Seminar, r = %s (n = %d)."),
                                     format_value(r), nrow(data))) +
     theme_monitor()
 }
