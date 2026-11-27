@@ -14,6 +14,11 @@
 #   MONITOR_TEST_DIRS       Ergebnisverzeichnisse der Tests, getrennt durch ";",
 #                           Platzhalter * erlaubt (Standard: alle Batterien unter
 #                           /srv/shiny-server/musikalische_entwicklung_messen)
+#   MONITOR_LEGACY_FILES    CSV-Dateien mit Messungen früherer Semester, getrennt
+#                           durch ";", Platzhalter * erlaubt (Standard:
+#                           /home/shiny/monitor_data/*.csv)
+#   MONITOR_SEMESTER_START  Beginn des Semesters; erst ab hier zählen Messungen
+#                           für Anfang/Ende des TOM (Standard: 2026-10-01)
 #   MONITOR_ADMIN_PASSWORD  Passwort der Dozentenansicht (ohne: gesperrt)
 # Gibt es weder Protokolle noch Testergebnisse, laufen Demodaten.
 # Hilfsfunktionen in R/ werden von Shiny automatisch geladen.
@@ -29,6 +34,10 @@ test_dirs      <- strsplit(Sys.getenv(
   "MONITOR_TEST_DIRS",
   unset = "/srv/shiny-server/musikalische_entwicklung_messen/*/output/results"
 ), ";", fixed = TRUE)[[1]]
+legacy_files   <- strsplit(Sys.getenv(
+  "MONITOR_LEGACY_FILES", unset = "/home/shiny/monitor_data/*.csv"
+), ";", fixed = TRUE)[[1]]
+semester_start <- as.Date(Sys.getenv("MONITOR_SEMESTER_START", unset = "2026-10-01"))
 admin_password <- Sys.getenv("MONITOR_ADMIN_PASSWORD")
 
 # Schutz der Anonymität: Gruppenmittel erst ab so vielen Personen pro Woche,
@@ -38,14 +47,14 @@ min_n_distribution <- 5
 
 load_monitor_data <- function() {
   protocols <- read_protocols(data_root)
-  tests <- read_tests(test_dirs)
+  tests <- read_tests(test_dirs, legacy_files)
   demo <- nrow(protocols) == 0 && nrow(tests) == 0
   if (demo) {
     protocols <- simulate_protocol_data()
     tests <- simulate_test_data(unique(protocols$p_id))
   }
   list(protocols = protocols, tests = tests,
-       persons = person_table(protocols, tests), demo = demo)
+       persons = person_table(protocols, tests, semester_start), demo = demo)
 }
 
 variable_choices <- setNames(monitor_variables$id, monitor_variables$label)
@@ -192,13 +201,19 @@ server <- function(input, output, session) {
     tests <- monitor()$tests[monitor()$tests$p_id == active_id(), ]
     validate(need(nrow(tests) > 0, "Es liegen noch keine Ergebnisse aus Tests oder Fragebögen vor."))
     tests <- tests[order(tests$time), ]
-    data.frame(
+    table <- data.frame(
       "Test / Fragebogen" = test_registry$label[match(tests$test, test_registry$id)],
       "Wert"              = format_value(tests$value),
       "Datum"             = format(tests$date, "%d.%m.%Y"),
       check.names = FALSE
     )
-  }, striped = TRUE, hover = TRUE, align = "lrl")
+    # Selbst angegebener Durchgang (TOM), "4" heißt "4 oder öfter"
+    if (any(!is.na(tests$run))) {
+      table$Durchgang <- ifelse(is.na(tests$run), "–",
+                                ifelse(tests$run >= 4, "4+", format(tests$run)))
+    }
+    table
+  }, striped = TRUE, hover = TRUE, align = "l")
 
   # --- Lernverlauf ---
   panels <- reactive({

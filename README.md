@@ -18,6 +18,8 @@ shiny::runApp()
 |---|---|
 | `MONITOR_DATA_ROOT` | Ordner, in dem `<gruppe>_protocol/output/results` liegt. Standard: `/srv/shiny-server` |
 | `MONITOR_TEST_DIRS` | Ergebnisverzeichnisse der Tests und Fragebögen, getrennt durch `;`, Platzhalter `*` erlaubt. Standard: `/srv/shiny-server/musikalische_entwicklung_messen/*/output/results` (jede Batterie in diesem Ordner wird ohne Neustart gefunden) |
+| `MONITOR_LEGACY_FILES` | CSV-Dateien mit Messungen früherer Semester (Spalten `p_id`, `test`, `time`, `value`, optional `run`), getrennt durch `;`, Platzhalter erlaubt. Standard: `/home/shiny/monitor_data/*.csv` |
+| `MONITOR_SEMESTER_START` | Ab diesem Datum zählen Messungen für Anfang/Ende des TOM. Standard: `2026-10-01` |
 | `MONITOR_ADMIN_PASSWORD` | Passwort der Dozentenansicht. Ohne Variable ist sie gesperrt |
 
 - Die Daten werden beim Seitenaufruf und bei jedem Klick auf „Anzeigen" neu
@@ -27,6 +29,15 @@ shiny::runApp()
   Protokolle hat.
 - Tests: Die ID muss dieselbe Matrikelnummer sein. Alle Messungen bleiben
   erhalten; als Datum gilt der Beginn der Sitzung.
+- TOM: wird in einer Sitzung zweimal ausgefüllt. In der Übersicht steht der
+  selbst angegebene Durchgang (`TOM_RUN$run`). Für Univariat/Bivariat gibt es
+  je Skala Anfang, Ende und Veränderung (Ende minus Anfang): erste und letzte
+  Messung am Tag der ersten TOM-Messung ab `MONITOR_SEMESTER_START`.
+- Frühere Semester: Messungen aus `MONITOR_LEGACY_FILES` erscheinen in der
+  Übersicht, aber nur für Personen, die in diesem Semester einen Test gemacht
+  haben. Den TOM aus dem WiSe 25/26 wandelt
+  `tools/convert_tom_wise2526.R` um; die Datei enthält Matrikelnummern und
+  gehört nicht ins Repository.
 - Gibt es weder Protokolle noch Testergebnisse, laufen Demodaten (IDs
   `1001`–`1024`).
 - Ergebnisdateien gehören nicht ins Repository (`data/`, `output/` sind
