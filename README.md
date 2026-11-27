@@ -50,9 +50,9 @@ shiny::runApp()
 | Übersicht | Zahl der Protokolle, erstes und letztes Datum, alle Testergebnisse mit Datum |
 | Lernverlauf | Kurven je nach Gruppe, dazu der Gruppenmittelwert pro Kalenderwoche |
 | Übezeit | Minuten pro Woche, dazu der Gruppenmittelwert |
-| Univariat | Histogramm des ganzen Seminars, eigener Wert als rote vertikale Linie |
-| Bivariat | Streudiagramm des ganzen Seminars, eigener Punkt rot mit roten Linien bei den eigenen Werten |
-| Dozent*in | Rücklauf pro Woche, alle Personen, Ansicht einer Person öffnen |
+| Univariat | Histogramm des ganzen Seminars mit n, auch ohne Matrikelnummer; mit Matrikelnummer zusätzlich der eigene Wert als rote vertikale Linie |
+| Bivariat | Streudiagramm des ganzen Seminars, auch ohne Matrikelnummer; mit Matrikelnummer eigener Punkt rot mit roten Linien bei den eigenen Werten |
+| Dozent*in | Teilnahme pro Test/Fragebogen (Personen, Messungen, beim TOM Personen mit Anfang und Ende), Histogramme aller Variablen auf einen Blick (rote Linie bei der ausgewählten Person), Rücklauf pro Woche, alle Personen, Ansicht einer Person öffnen |
 
 ## Verrechnung
 
@@ -71,8 +71,8 @@ shiny::runApp()
 
 - Gruppenmittel erscheinen erst ab 3 Personen pro Kalenderwoche
   (`min_n_group_mean` in `app.R`).
-- Verteilungen erscheinen erst ab 5 weiteren Personen mit einem Wert
-  (`min_n_distribution`). In der Dozentenansicht gilt diese Grenze nicht.
+- Verteilungen erscheinen erst ab 5 Personen mit einem Wert (ohne die
+  ausgewählte Person; `min_n_distribution`). In der Dozentenansicht gilt diese Grenze nicht.
 
 ## Neuen Test ergänzen
 

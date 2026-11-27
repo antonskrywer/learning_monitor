@@ -106,7 +106,8 @@ ui <- page_navbar(
   ),
   nav_panel(
     "Univariat",
-    h3("Dein Wert im Seminar"),
+    h3("Verteilung im Seminar"),
+    p("Mit einer Matrikelnummer links erscheint der eigene Wert als rote Linie."),
     selectInput("uni_var", "Variable", choices = variable_choices, width = "100%"),
     plotOutput("uni_plot", height = "440px")
   ),
@@ -254,30 +255,44 @@ server <- function(input, output, session) {
   # Die Dozentenansicht zeigt Verteilungen auch bei wenigen Personen.
   min_others <- reactive(if (lecturer()) 1 else min_n_distribution)
 
+  # Ohne Matrikelnummer: ganzes Seminar ohne rote Markierung. Variablen, die
+  # nur innerhalb einer Gruppe vergleichbar sind, brauchen eine Person mit
+  # Protokollen.
+  selected_id    <- reactive(if (known_id()) active_id() else NULL)
+  selected_group <- reactive(if (known_id()) person()$group else NA)
+
   compare <- function(vars) {
-    data <- comparison_data(monitor()$persons, active_id(), vars)
-    validate(need(any(data$own), "Zu dieser Auswahl liegt für dich noch kein Wert vor."))
+    if (any(is_group_variable(vars))) {
+      validate(need(!is.na(selected_group()), paste(
+        "Diese Variable gibt es nur innerhalb einer Gruppe: Bitte links die",
+        "Matrikelnummer einer Person mit Lernprotokollen eingeben.")))
+    }
+    data <- comparison_data(monitor()$persons, selected_id(), vars)
+    validate(need(nrow(data) > 0, "Zu dieser Auswahl liegen noch keine Werte vor."))
     validate(need(sum(!data$own) >= min_others(), sprintf(
-      "Der Vergleich erscheint, sobald Werte von mindestens %d weiteren Personen vorliegen.",
+      "Die Verteilung erscheint, sobald Werte von mindestens %d (weiteren) Personen vorliegen.",
       min_n_distribution)))
     data
   }
 
+  no_value_note <- function(data) {
+    if (!is.null(selected_id()) && !any(data$own)) "Für diese Matrikelnummer liegt noch kein Wert vor."
+  }
+
   output$uni_plot <- renderPlot({
-    need_person()
     data <- compare(input$uni_var)
     values <- data[[input$uni_var]]
     plot_histogram(values, values[data$own],
-                   variable_label(input$uni_var, person()$group))
+                   variable_label(input$uni_var, selected_group()),
+                   own_note = no_value_note(data))
   }, res = 96)
 
   output$bi_plot <- renderPlot({
-    need_person()
     validate(need(input$bi_x != input$bi_y, "Bitte zwei verschiedene Variablen wählen."))
     data <- compare(c(input$bi_x, input$bi_y))
     plot_scatter(data.frame(x = data[[input$bi_x]], y = data[[input$bi_y]], own = data$own),
-                 variable_label(input$bi_x, person()$group),
-                 variable_label(input$bi_y, person()$group))
+                 variable_label(input$bi_x, selected_group()),
+                 variable_label(input$bi_y, selected_group()))
   }, res = 96)
 
   # --- Dozentenansicht ---
@@ -309,11 +324,41 @@ server <- function(input, output, session) {
         selectInput("lecturer_person", NULL, choices = persons$p_id, width = "100%"),
         actionButton("lecturer_show", "Person ansehen", class = "btn-primary")
       ),
+      h4("Teilnahme an Tests und Fragebögen", class = "mt-4"),
+      p(sprintf("Ab %s. Personen: wie viele den Test mindestens einmal gemacht haben.",
+                format(semester_start, "%d.%m.%Y"))),
+      tableOutput("participation_table"),
+      h4("Alle Variablen", class = "mt-4"),
+      p("Verteilung im ganzen Seminar; n = Personen mit einem Wert.",
+        "Ist links oder oben eine Person ausgewählt, steht ihr Wert als rote Linie."),
+      plotOutput("all_histograms", height = "auto"),
       h4("Rücklauf pro Woche", class = "mt-4"),
       plotOutput("response_plot", height = "380px"),
       h4("Alle Personen", class = "mt-4"),
       tableOutput("person_table")
     )
+  })
+
+  output$participation_table <- renderTable({
+    req(lecturer())
+    t <- participation_table(monitor()$tests, monitor()$persons, semester_start)
+    data.frame(
+      "Test / Fragebogen"         = t$test,
+      "Personen"                  = t$n_persons,
+      "Messungen"                 = t$n_measurements,
+      "Mit Anfang und Ende (TOM)" = ifelse(is.na(t$n_paired), "", t$n_paired),
+      check.names = FALSE
+    )
+  }, striped = TRUE, hover = TRUE, align = "lrrr")
+
+  all_long <- reactive(all_variables_long(monitor()$persons, selected_id()))
+
+  output$all_histograms <- renderPlot({
+    req(lecturer())
+    plot_all_histograms(all_long())
+  }, res = 96, height = function() {
+    n <- if (is.null(all_long())) 1 else nlevels(all_long()$variable)
+    120 + 300 * ceiling(n / 2)
   })
 
   output$response_plot <- renderPlot({

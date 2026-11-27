@@ -209,14 +209,58 @@ person_table <- function(protocols, tests, semester_start) {
 }
 
 # Personen mit Werten in allen gewählten Variablen; own markiert die
-# ausgewählte Person. Bei einer Gruppen-Variable nur die eigene Gruppe.
+# ausgewählte Person (id = NULL: niemand ausgewählt). Bei einer
+# Gruppen-Variable nur die eigene Gruppe, ohne Person also niemand.
 comparison_data <- function(persons, id, vars) {
-  if (any(monitor_variables$scope[match(vars, monitor_variables$id)] == "group")) {
-    group <- persons$group[persons$p_id == id]
+  if (is.null(id)) id <- NA_character_
+  if (any(is_group_variable(vars))) {
+    group <- persons$group[persons$p_id %in% id]
     persons <- persons[persons$group %in% group, ]
   }
   out <- persons[stats::complete.cases(persons[vars]), c("p_id", "group", vars)]
-  out$own <- out$p_id == id
+  out$own <- !is.na(id) & out$p_id == id
+  out
+}
+
+is_group_variable <- function(vars) {
+  monitor_variables$scope[match(vars, monitor_variables$id)] == "group"
+}
+
+# Alle seminarweiten Variablen in Langform (Variable, Wert, eigene Person)
+# für die Histogramm-Übersicht der Dozentenansicht. Nur Variablen mit Werten;
+# der Name enthält die Zahl der Personen.
+all_variables_long <- function(persons, id) {
+  vars <- monitor_variables$id[monitor_variables$scope == "seminar"]
+  rows <- lapply(vars, function(var) {
+    keep <- !is.na(persons[[var]])
+    if (!any(keep)) return(NULL)
+    data.frame(variable = var, value = persons[[var]][keep],
+               own = !is.null(id) & persons$p_id[keep] %in% id, stringsAsFactors = FALSE)
+  })
+  long <- do.call(rbind, rows)
+  if (is.null(long)) return(NULL)
+  n <- table(long$variable)
+  labels <- sprintf("%s (n = %d)", monitor_variables$label[match(names(n), monitor_variables$id)],
+                    as.integer(n))
+  long$variable <- factor(long$variable, levels = intersect(vars, names(n)),
+                          labels = labels[match(intersect(vars, names(n)), names(n))])
+  long
+}
+
+# Teilnahme pro Test/Fragebogen ab semester_start: Personen und Messungen.
+# Bei paarigen Werten zusätzlich die Personen mit Anfang und Ende.
+participation_table <- function(tests, persons, semester_start) {
+  tests <- tests[tests$date >= semester_start, ]
+  out <- data.frame(
+    test   = test_registry$label,
+    n_persons = vapply(test_registry$id, function(t) length(unique(tests$p_id[tests$test == t])), integer(1)),
+    n_measurements = vapply(test_registry$id, function(t) sum(tests$test == t), integer(1)),
+    n_paired = vapply(test_registry$id, function(t) {
+      if (t %in% paired_tests) sum(!is.na(persons[[paste0(t, "_diff")]])) else NA_integer_
+    }, integer(1)),
+    stringsAsFactors = FALSE
+  )
+  rownames(out) <- NULL
   out
 }
 

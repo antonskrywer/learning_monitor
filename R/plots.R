@@ -166,17 +166,47 @@ plot_practice <- function(own, group) {
 }
 
 # --- Univariat ----------------------------------------------
-# Verteilung des ganzen Seminars (eigener Wert eingeschlossen), eigener Wert
-# als rote vertikale Linie.
-plot_histogram <- function(values, own_value, label) {
-  ggplot2::ggplot(data.frame(value = values), ggplot2::aes(value)) +
-    ggplot2::geom_histogram(bins = 12, fill = uhh_hellblau, colour = "white") +
-    ggplot2::geom_vline(xintercept = own_value, colour = uhh_rot, linewidth = 1.6) +
+# Verteilung des ganzen Seminars (eigener Wert eingeschlossen). Ist eine
+# Person ausgewählt, steht ihr Wert als rote vertikale Linie darüber.
+# own_value: numeric(0) oder NA = keine Person bzw. kein Wert; own_note:
+# Hinweis, wenn eine Person ausgewählt ist, aber keinen Wert hat.
+plot_histogram <- function(values, own_value, label, own_note = NULL) {
+  own_value <- own_value[!is.na(own_value)]
+  caption <- sprintf("Balken: ganzes Seminar (n = %d Personen).", length(values))
+  if (length(own_value) > 0) {
+    caption <- paste0(sprintf("Rote Linie: eigener Wert (%s).\n", format_value(own_value[1])), caption)
+  } else if (!is.null(own_note)) {
+    caption <- paste0(own_note, "\n", caption)
+  }
+  p <- ggplot2::ggplot(data.frame(value = values), ggplot2::aes(value)) +
+    ggplot2::geom_histogram(bins = 12, fill = uhh_hellblau, colour = "white")
+  if (length(own_value) > 0) {
+    p <- p + ggplot2::geom_vline(xintercept = own_value[1], colour = uhh_rot, linewidth = 1.6)
+  }
+  p +
     ggplot2::scale_y_continuous(breaks = function(l) unique(floor(pretty(l))), name = "Personen") +
-    ggplot2::labs(x = label,
-                  caption = sprintf("Rote Linie: eigener Wert (%s).\nBalken: ganzes Seminar (n = %d).",
-                                    format_value(own_value), length(values))) +
+    ggplot2::labs(x = label, caption = caption) +
     theme_monitor()
+}
+
+# Alle Variablen auf einen Blick (Dozentenansicht): ein Histogramm pro
+# Variable mit eigener x-Achse, rote Linie bei der ausgewählten Person.
+# long: variable (Faktor mit n im Namen), value, own.
+plot_all_histograms <- function(long, ncol = 2) {
+  if (is.null(long) || nrow(long) == 0) return(empty_plot("Noch keine Werte vorhanden."))
+  levels(long$variable) <- vapply(levels(long$variable), function(l)
+    paste(strwrap(l, width = 32), collapse = "\n"), character(1), USE.NAMES = FALSE)
+  own <- long[long$own, ]
+  ggplot2::ggplot(long, ggplot2::aes(value)) +
+    ggplot2::geom_histogram(bins = 12, fill = uhh_hellblau, colour = "white") +
+    ggplot2::geom_vline(data = own, ggplot2::aes(xintercept = value), colour = uhh_rot,
+                        linewidth = 1.3) +
+    ggplot2::facet_wrap(~variable, ncol = ncol, scales = "free") +
+    ggplot2::scale_y_continuous(breaks = function(l) unique(floor(pretty(l))), name = "Personen") +
+    ggplot2::labs(x = NULL, caption = if (nrow(own) > 0) "Rote Linie: ausgewählte Person.") +
+    theme_monitor() +
+    ggplot2::theme(strip.text = ggplot2::element_text(size = 12, face = "bold", hjust = 0,
+                                                      colour = uhh_steingrau))
 }
 
 # --- Bivariat -----------------------------------------------
@@ -185,15 +215,14 @@ plot_histogram <- function(values, own_value, label) {
 plot_scatter <- function(data, x_label, y_label) {
   r <- suppressWarnings(stats::cor(data$x, data$y))
   own <- data[data$own, ]
+  caption <- sprintf("Punkte: ganzes Seminar, r = %s (n = %d Personen).", format_value(r), nrow(data))
+  if (nrow(own) > 0) caption <- paste0("Roter Punkt und rote Linien: eigene Werte.\n", caption)
   ggplot2::ggplot(data, ggplot2::aes(x, y)) +
     ggplot2::geom_vline(xintercept = own$x, colour = uhh_rot, linewidth = 1.2) +
     ggplot2::geom_hline(yintercept = own$y, colour = uhh_rot, linewidth = 1.2, linetype = "dashed") +
     ggplot2::geom_point(data = data[!data$own, ], colour = uhh_hellblau, size = 3.4) +
     ggplot2::geom_point(data = own, colour = uhh_rot, size = 5.5) +
-    ggplot2::labs(x = x_label, y = y_label,
-                  caption = sprintf(paste0("Roter Punkt und rote Linien: eigene Werte.\n",
-                                           "Punkte: ganzes Seminar, r = %s (n = %d)."),
-                                    format_value(r), nrow(data))) +
+    ggplot2::labs(x = x_label, y = y_label, caption = caption) +
     theme_monitor()
 }
 
